@@ -36,7 +36,6 @@ This implementation uses a **polynomial interest rate model** that compounds int
 ### Polynomial Formula
 
 The interest rate per period is calculated using a 5th-degree polynomial function of utilization:
-
 ```
 rate(u) = 1 + a + b·u + c·u² + d·u³ + e·u⁴ + f·u⁵
 ```
@@ -47,7 +46,6 @@ Where:
 - All coefficients are scaled by `CoefficientDenomination` (10^8)
 
 ### Utilization Calculation
-
 ```scala
 val borrowed = borrowTokens * recordedValue / BorrowTokenDenomination
 val util = InterestDenomination * borrowed / (poolAssets + borrowed)
@@ -58,7 +56,6 @@ Utilization ranges from 0 (no borrows) to `InterestDenomination` (100% utilized)
 ### Value Update
 
 Each update period, the borrow token value compounds:
-
 ```scala
 val validValueUpdate = finalValue == recordedValue * currentRate / InterestDenomination
 ```
@@ -82,7 +79,6 @@ val validValueUpdate = finalValue == recordedValue * currentRate / InterestDenom
 ### Location
 
 The parameter box is identified by a hardcoded NFT:
-
 ```scala
 val InterestParamaterBoxNft = fromBase58("{interestParamNFT}")
 val parameterBox = CONTEXT.dataInputs(1)
@@ -193,7 +189,6 @@ Each coefficient affects the interest rate curve differently based on its polyno
 ## Update Mechanism
 
 ### Trigger Conditions
-
 ```scala
 val isReadyToUpdate = HEIGHT >= recordedHeight
 val validFinalHeight = finalHeight == recordedHeight + updateFrequency
@@ -210,7 +205,6 @@ Updates can only occur after the previous update period has elapsed.
 5. Update height register to `currentHeight + updateFrequency`
 
 ### Validation Requirements
-
 ```scala
 val validSuccessorScript = SELF.propositionBytes == successor.propositionBytes
 val retainedERG = successor.value >= SELF.value - MaximumExecutionFee
@@ -259,3 +253,21 @@ The polynomial coefficients can be modified by updating the Parameter box, allow
 - [ ] Pool NFT hardcoded in interest contract
 - [ ] Update bot configured to trigger updates every 120 blocks
 - [ ] Coefficient bounds validated in parameter box contract
+
+---
+
+## Note: Simple Interest Variant
+
+To convert this implementation to **simple (non-compounding) interest**, change the value update formula from multiplication to addition:
+
+**Compound (current):**
+```scala
+val validValueUpdate = finalValue == recordedValue * currentRate / InterestDenomination
+```
+
+**Simple:**
+```scala
+val validValueUpdate = finalValue == recordedValue + (BorrowTokenDenomination * currentRate / InterestDenomination)
+```
+
+With simple interest, each update adds a fixed increment based on the original denomination rather than multiplying the current value. The interest earned does not itself earn interest in subsequent periods.
